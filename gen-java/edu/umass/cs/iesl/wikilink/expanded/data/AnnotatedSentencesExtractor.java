@@ -16,7 +16,7 @@ import java.util.Vector;
 public class AnnotatedSentencesExtractor {
 	static public Vector<String> extractSentences(String text, HashMap<String, Mention> mentions) {
 		Vector<String> rez = new Vector<String>();
-		
+
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < text.length(); ++i) {
 			char c = text.charAt(i);
@@ -32,23 +32,23 @@ public class AnnotatedSentencesExtractor {
 		}		
 		return rez;
 	}
-	
+
 	static private int NumberMentions(String text, HashMap<String, Mention> mentions) {
 		int num_mentions = 0;
 		for (Mention m : mentions.values()) {
 			int lastIndex = 0;
 			while(lastIndex != -1){
 				lastIndex = text.indexOf(m.anchor_text,lastIndex);
-			    if( lastIndex != -1){
-			    	num_mentions ++;
-			    	lastIndex += m.anchor_text.length();
-			    }
+				if( lastIndex != -1){
+					num_mentions ++;
+					lastIndex += m.anchor_text.length();
+				}
 			}
 		}
 		return num_mentions;
 	}
-	
-	
+
+
 	// Given the input string, it inserts the mentions in it near the corresponding substrings. 
 	static private String insertMentions(String text, HashMap<String, Mention> mentions) {
 		String rez = text;
@@ -56,18 +56,18 @@ public class AnnotatedSentencesExtractor {
 			int lastIndex = 0;
 			while(lastIndex != -1){
 				lastIndex = rez.indexOf(m.anchor_text, lastIndex);
-			    if( lastIndex != -1){
-			    	StringBuilder sb = new StringBuilder();
-			    	sb.append(rez.substring(0, lastIndex));
-			    	sb.append("[");
-			    	sb.append(rez.substring(lastIndex, lastIndex + m.anchor_text.length()));
-			    	String t = "]<#" + m.wiki_url.substring(7) + ";" + m.freebase_id + "#>";
+				if( lastIndex != -1){
+					StringBuilder sb = new StringBuilder();
+					sb.append(rez.substring(0, lastIndex));
+					sb.append("[");
+					sb.append(rez.substring(lastIndex, lastIndex + m.anchor_text.length()));
+					String t = "]<#" + m.wiki_url.substring(7) + ";" + m.freebase_id + "#>";
 					sb.append(t);
 					sb.append(rez.substring(lastIndex + m.anchor_text.length()));
-			    	rez = sb.toString();
-		
-			    	lastIndex += m.anchor_text.length() + 1 + t.length();
-			    }
+					rez = sb.toString();
+
+					lastIndex += m.anchor_text.length() + 1 + t.length();
+				}
 			}
 		}
 		return rez;
