@@ -9,24 +9,23 @@
                 <attribute name="Class-Path" value="."/>
             </manifest>
             <fileset dir="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/bin"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/libthrift-1.0.0.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/slf4j-log4j12-1.5.8.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/log4j-1.2.14.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/junit-4.4.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/slf4j-api-1.5.8.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/httpcore-4.2.4.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/httpclient-4.2.5.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/commons-lang3-3.1.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/servlet-api-2.5.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/commons-logging-1.1.1.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/thrift/lib/java/build/lib/commons-codec-1.6.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/htmlparser1_6/lib/thumbelina.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/htmlparser1_6/lib/filterbuilder.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/htmlparser1_6/lib/htmlparser.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/htmlparser1_6/lib/htmllexer.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/htmlparser1_6/lib/sax2.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/htmlparser1_6/lib/junit.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/jsoup-1.7.3.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/libthrift-1.0.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/slf4j-log4j12-1.5.8.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/slf4j-api-1.5.8.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/servlet-api-2.5.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/log4j-1.2.14.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/junit-4.4.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/httpcore-4.2.4.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/httpclient-4.2.5.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/commons-logging-1.1.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/commons-lang3-3.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/commons-codec-1.6.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/thumbelina.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/filterbuilder.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/htmlparser.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/htmllexer.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/sax2.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/junit.jar"/>
         </jar>
     </target>
 </project>
