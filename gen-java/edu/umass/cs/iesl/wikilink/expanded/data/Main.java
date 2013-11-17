@@ -19,7 +19,7 @@ public class Main {
 			public TBase create() {
 				return new WikiLinkItem();
 			}
-		});
+		}); 
 
 		thriftIn.open();
 
