@@ -41,8 +41,8 @@ public class Main {
 			WikiLinkItem i = ((WikiLinkItem)thriftIn.read());		  
 
 			if (i.content.dom != null) {
-				// Use an in-memory file system to solve this API issue with StringExtractor that doesn't allow 
-				// input as a string HTML file content, but just the HTML file path.
+				// Use an in-memory file system to solve this API issue with StringExtractor that
+				// doesn't allow input as a string HTML file content, but just the HTML file path.
 				File temp = new File("/dev/shm/htmlparser.tmp");
 				BufferedWriter out = new BufferedWriter(new FileWriter(temp));
 
@@ -64,13 +64,16 @@ public class Main {
 					}
 				}
 
-				// Vector with sentences containing at least two wikipedia hyperlinks; annotated with their freebase ids.
-				Vector<String> proper_sentences = AnnotatedSentencesExtractor.extractSentences(all_paragraphs, mentions_hashtable);
+				// Vector with sentences containing at least two wikipedia hyperlinks; annotated with their
+				// freebase ids.
+				Vector<String> proper_sentences =
+					AnnotatedSentencesExtractor.extractSentences(all_paragraphs, mentions_hashtable);
 				for (String s : proper_sentences) System.out.println(">>>>>\n" + s);
 				if (proper_sentences.size() > 0) {
-					System.out.println("------------- Page " + pages_counter + " --------------");
-					System.out.print("--------- nr anchors = " + AnnotatedSentencesExtractor.total_number_anchors);
-					System.out.println(" ; nr null freebase ids = " + AnnotatedSentencesExtractor.number_null_freebase_ids +	" --------------");
+					System.out.println("------- Finished page " + pages_counter + " ----");
+					System.out.print("------ Stats so far: nr anchors = " + AnnotatedSentencesExtractor.total_number_anchors);
+					System.out.print(" ; nr null freebase ids = ");
+					System.out.println(AnnotatedSentencesExtractor.number_null_freebase_ids + " ----");
 				}
 			}
 			pages_counter++;
