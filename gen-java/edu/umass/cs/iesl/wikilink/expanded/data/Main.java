@@ -71,7 +71,8 @@ public class Main {
 				for (String s : proper_sentences) System.out.println(">>>>>\n" + s);
 				if (proper_sentences.size() > 0) {
 					System.out.println("------- Finished page " + pages_counter + " ----");
-					System.out.print("------ Stats so far: nr anchors = " + AnnotatedSentencesExtractor.total_number_anchors);
+					System.out.print("------ Stats so far: nr anchors = ");
+					System.out.print(AnnotatedSentencesExtractor.total_number_anchors);
 					System.out.print(" ; nr null freebase ids = ");
 					System.out.println(AnnotatedSentencesExtractor.number_null_freebase_ids + " ----");
 				}
