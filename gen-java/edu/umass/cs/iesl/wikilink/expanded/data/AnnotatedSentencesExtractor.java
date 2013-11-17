@@ -1,6 +1,6 @@
 package edu.umass.cs.iesl.wikilink.expanded.data;
 
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -12,20 +12,24 @@ import java.util.Vector;
 // 		text = "Barack Obama met with Putin.";
 //		mentions = ("Barack Obama":(wikipedia/Barak_Obrama; freebaseid= 920))
 //				   ("Putin":(wikipedia/Vladimir_Putin; freebaseid= 230))
-// returns: "Barack Obama <#wikipedia/Barack_Obama;920#> met with Putin <#wikipedia/Putin;230#>."
+// returns: "[Barack Obama]<#wikipedia/Barack_Obama;920#> met with [Putin]<#wikipedia/Putin;230#>."
 public class AnnotatedSentencesExtractor {
-	static public Vector<String> extractSentences(String text, HashMap<String, Mention> mentions) {
+	static int number_null_freebase_ids = 0;
+	static int total_number_anchors = 0;
+	
+	static public Vector<String> extractSentences(String text, TreeMap<String, Mention> mentions) {
 		Vector<String> rez = new Vector<String>();
-
+		
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < text.length(); ++i) {
 			char c = text.charAt(i);
 			if (c == '\n' || c == '.' || c == '!' || c == '?') {
 				if (c != '\n') sb.append(c);
-				if (NumberMentions(sb.toString(), mentions) >= 2) {
-					rez.add(insertMentions(sb.toString(), mentions));
+				String annotated_sentence = insertMentions(sb.toString(), mentions);
+				sb = new StringBuilder();				
+				if (annotated_sentence != null) {
+					rez.add(annotated_sentence);
 				}
-				sb = new StringBuilder();
 			} else {
 				sb.append(c);
 			}
@@ -33,43 +37,45 @@ public class AnnotatedSentencesExtractor {
 		return rez;
 	}
 
-	static private int NumberMentions(String text, HashMap<String, Mention> mentions) {
-		int num_mentions = 0;
-		for (Mention m : mentions.values()) {
-			int lastIndex = 0;
-			while(lastIndex != -1){
-				lastIndex = text.indexOf(m.anchor_text,lastIndex);
-				if( lastIndex != -1){
-					num_mentions ++;
-					lastIndex += m.anchor_text.length();
-				}
-			}
-		}
-		return num_mentions;
-	}
-
-
 	// Given the input string, it inserts the mentions in it near the corresponding substrings. 
-	static private String insertMentions(String text, HashMap<String, Mention> mentions) {
+	static private String insertMentions(String text, TreeMap<String, Mention> mentions) {
 		String rez = text;
+		int nr_anchors = 0;
+		int nr_null_freebase_ids = 0;
+		
 		for (Mention m : mentions.values()) {
 			int lastIndex = 0;
 			while(lastIndex != -1){
 				lastIndex = rez.indexOf(m.anchor_text, lastIndex);
 				if( lastIndex != -1){
-					StringBuilder sb = new StringBuilder();
-					sb.append(rez.substring(0, lastIndex));
-					sb.append("[");
-					sb.append(rez.substring(lastIndex, lastIndex + m.anchor_text.length()));
-					String t = "]<#" + m.wiki_url.substring(7) + ";" + m.freebase_id + "#>";
-					sb.append(t);
-					sb.append(rez.substring(lastIndex + m.anchor_text.length()));
-					rez = sb.toString();
+					int f = rez.indexOf("[",lastIndex), l = rez.indexOf("#>",lastIndex);
+					if (l != -1 && (f == -1 || f > l)) { // We are inside an anchor already
+						lastIndex += m.anchor_text.length();
+					} else {
+						StringBuilder sb = new StringBuilder();
+						sb.append(rez.substring(0, lastIndex));
+						sb.append("[");
+						sb.append(rez.substring(lastIndex, lastIndex + m.anchor_text.length()));
+						String t = "]<#" + m.wiki_url.substring(7) + ";" + m.freebase_id + "#>";
+						sb.append(t);
+						sb.append(rez.substring(lastIndex + m.anchor_text.length()));
+						rez = sb.toString();
+						nr_anchors ++;
+						if (m.freebase_id == null) nr_null_freebase_ids++;
 
-					lastIndex += m.anchor_text.length() + 1 + t.length();
+						lastIndex += m.anchor_text.length() + 1 + t.length();
+					}
 				}
 			}
 		}
+		
+		// Keep just sentences with at least 2 wikipedia references (anchors).
+		if (nr_anchors < 2) {
+			return null;
+		}
+		
+		number_null_freebase_ids += nr_null_freebase_ids;
+		total_number_anchors += nr_anchors;
 		return rez;
 	}
 }

@@ -3,13 +3,25 @@ package edu.umass.cs.iesl.wikilink.expanded.data;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.TreeMap;
 import java.util.Vector;
 
 import org.apache.thrift.TBase;
 import org.htmlparser.parserapplications.StringExtractor;
 
 import org.apache.commons.lang3.StringEscapeUtils;
+
+class StringComp implements Comparator<String> {
+	@Override
+	public int compare(String o1, String o2) {
+		// Try to match longer anchor texts first. For example: "University of Oklahoma" will be replaced
+		// with its anchor before it will be "Oklahoma".
+		if (o1.length() - o2.length() != 0) return o2.length() - o1.length();
+		return o2.compareTo(o1);
+	}
+}
 
 public class Main {
 	public static void main(String[] args) throws Exception {
@@ -24,6 +36,7 @@ public class Main {
 		thriftIn.open();
 
 		int pages_counter = 1;
+		
 		while (thriftIn.hasNext()) {
 			WikiLinkItem i = ((WikiLinkItem)thriftIn.read());		  
 
@@ -44,7 +57,7 @@ public class Main {
 				}
 
 				// Remove duplicates in mentions:
-				HashMap<String, Mention> mentions_hashtable = new HashMap<String,Mention>();
+				TreeMap<String, Mention> mentions_hashtable = new TreeMap<String,Mention>(new StringComp());
 				for (Mention m : i.mentions) {
 					if (!mentions_hashtable.containsKey(m.anchor_text)) {
 						mentions_hashtable.put(m.anchor_text, m);
@@ -53,12 +66,13 @@ public class Main {
 
 				// Vector with sentences containing at least two wikipedia hyperlinks; annotated with their freebase ids.
 				Vector<String> proper_sentences = AnnotatedSentencesExtractor.extractSentences(all_paragraphs, mentions_hashtable);
-				for (String s : proper_sentences) System.out.println(">>>>> " + s);
+				for (String s : proper_sentences) System.out.println(">>>>>\n" + s);
 				if (proper_sentences.size() > 0) {
 					System.out.println("------------- Page " + pages_counter + " --------------");
+					System.out.print("--------- nr anchors = " + AnnotatedSentencesExtractor.total_number_anchors);
+					System.out.println(" ; nr null freebase ids = " + AnnotatedSentencesExtractor.number_null_freebase_ids +	" --------------");
 				}
 			}
-
 			pages_counter++;
 		}
 
