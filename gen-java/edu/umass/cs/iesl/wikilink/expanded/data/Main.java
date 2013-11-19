@@ -1,27 +1,9 @@
 package edu.umass.cs.iesl.wikilink.expanded.data;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.TreeMap;
-import java.util.Vector;
 
 import org.apache.thrift.TBase;
-import org.htmlparser.parserapplications.StringExtractor;
 
-import org.apache.commons.lang3.StringEscapeUtils;
-
-class StringComp implements Comparator<String> {
-	@Override
-	public int compare(String o1, String o2) {
-		// Try to match longer anchor texts first. For example: "University of Oklahoma" will be replaced
-		// with its anchor before it will be "Oklahoma".
-		if (o1.length() - o2.length() != 0) return o2.length() - o1.length();
-		return o2.compareTo(o1);
-	}
-}
 
 public class Main {
 	public static void main(String[] args) throws Exception {
@@ -34,52 +16,12 @@ public class Main {
 		}); 
 
 		thriftIn.open();
-
-		int pages_counter = 1;
 		
-		while (thriftIn.hasNext()) {
-			WikiLinkItem i = ((WikiLinkItem)thriftIn.read());		  
-
-			if (i.content.dom != null) {
-				// Use an in-memory file system to solve this API issue with StringExtractor that
-				// doesn't allow input as a string HTML file content, but just the HTML file path.
-				File temp = new File("/dev/shm/htmlparser.tmp");
-				BufferedWriter out = new BufferedWriter(new FileWriter(temp));
-
-				out.write(HTMLHackCleaner.replaceSpecialSymbols(i.content.dom));
-				out.close();		
-
-				StringExtractor se = new StringExtractor("/dev/shm/htmlparser.tmp");
-				String all_paragraphs = se.extractStrings(false);
-
-				if (!temp.delete()) {
-					System.err.println("Cannot delete temporary file " + temp.getAbsolutePath());
-				}
-
-				// Remove duplicates in mentions:
-				TreeMap<String, Mention> mentions_hashtable = new TreeMap<String,Mention>(new StringComp());
-				for (Mention m : i.mentions) {
-					if (!mentions_hashtable.containsKey(m.anchor_text)) {
-						mentions_hashtable.put(m.anchor_text, m);
-					}
-				}
-
-				// Vector with sentences containing at least two wikipedia hyperlinks; annotated with their
-				// freebase ids.
-				Vector<String> proper_sentences =
-					AnnotatedSentencesExtractor.extractSentences(all_paragraphs, mentions_hashtable);
-				for (String s : proper_sentences) System.out.println(">>>>>\n" + s);
-				if (proper_sentences.size() > 0) {
-					System.out.println("------- Finished page " + pages_counter + " ----");
-					System.out.print("------ Stats so far: nr anchors = ");
-					System.out.print(AnnotatedSentencesExtractor.total_number_anchors);
-					System.out.print(" ; nr null freebase ids = ");
-					System.out.println(AnnotatedSentencesExtractor.number_null_freebase_ids + " ----");
-				}
-			}
-			pages_counter++;
-		}
-
+		/* HTML parser and sentence extractor */
+		//AnnotatedSentencesExtractor.parseHTMLandExtractSentences(thriftIn);
+		
+		AnchorsInvertedIndex.createIndex(thriftIn);
+		
 		thriftIn.close();
 	}
 }

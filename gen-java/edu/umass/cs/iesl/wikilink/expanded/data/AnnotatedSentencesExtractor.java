@@ -1,9 +1,15 @@
 package edu.umass.cs.iesl.wikilink.expanded.data;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.TreeMap;
-import java.util.List;
-import java.util.StringTokenizer;
 import java.util.Vector;
+
+import org.htmlparser.parserapplications.StringExtractor;
+import org.htmlparser.util.ParserException;
+
 
 // Given a set of mentions and a text representing the text from a HTML file, 
 // this class returns the sentences from the text that contain at least two anchors. 
@@ -77,5 +83,52 @@ public class AnnotatedSentencesExtractor {
 		number_null_freebase_ids += nr_null_freebase_ids;
 		total_number_anchors += nr_anchors;
 		return rez;
+	}
+
+
+	// Main function for complete sentence extraction given a Thrift stream as input.
+	static public void parseHTMLandExtractSentences(ThriftReader thriftIn) throws ParserException, IOException {
+		int pages_counter = 1;
+		
+		while (thriftIn.hasNext()) {
+			WikiLinkItem i = ((WikiLinkItem)thriftIn.read());		  
+			if (i.content.dom != null) {
+				// Use an in-memory file system to solve this API issue with StringExtractor that
+				// doesn't allow input as a string HTML file content, but just the HTML file path.
+				File temp = new File("/dev/shm/htmlparser.tmp");
+				BufferedWriter out = new BufferedWriter(new FileWriter(temp));
+
+				out.write(HTMLHackCleaner.replaceSpecialSymbols(i.content.dom));
+				out.close();		
+
+				StringExtractor se = new StringExtractor("/dev/shm/htmlparser.tmp");
+				String all_paragraphs = se.extractStrings(false);
+
+				temp.delete();
+
+				// Remove duplicates in mentions:
+				TreeMap<String, Mention> mentions_hashtable = new TreeMap<String,Mention>(new Utils.StringComp());
+				for (Mention m : i.mentions) {
+					//System.out.println(m.anchor_text + " " + m.wiki_url + " @@@@");
+					if (!mentions_hashtable.containsKey(m.anchor_text)) {
+						mentions_hashtable.put(m.anchor_text, m);
+					}
+				}
+
+				// Vector with sentences containing at least two wikipedia hyperlinks; annotated with their
+				// freebase ids.
+				Vector<String> proper_sentences =
+					AnnotatedSentencesExtractor.extractSentences(all_paragraphs, mentions_hashtable);
+				for (String s : proper_sentences) System.out.println(">>>>>\n" + s);
+				if (proper_sentences.size() > 0) {
+					System.out.println("------- Finished page " + pages_counter + " ----");
+					System.out.print("------ Stats so far: nr anchors = ");
+					System.out.print(AnnotatedSentencesExtractor.total_number_anchors);
+					System.out.print(" ; nr null freebase ids = ");
+					System.out.println(AnnotatedSentencesExtractor.number_null_freebase_ids + " ----");
+				}
+			}
+			pages_counter++;
+		}		
 	}
 }
