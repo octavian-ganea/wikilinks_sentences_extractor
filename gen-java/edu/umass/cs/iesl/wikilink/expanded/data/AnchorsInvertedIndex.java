@@ -6,12 +6,29 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.Vector;
 
 import org.htmlparser.util.ParserException;
+
+class Posting implements Comparable {
+	String anchor;
+	Integer count;
+	
+	public Posting(String a, Integer i) {
+		anchor = a; count = i;
+	}
+	@Override
+	public int compareTo(Object o) {
+		Posting x = (Posting) o;
+		if (count != x.count) return -count + x.count;
+		return anchor.compareTo(x.anchor);
+	}
+}
 
 public class AnchorsInvertedIndex {
 	// Create in memory index from one shard of data.
@@ -165,8 +182,15 @@ public class AnchorsInvertedIndex {
 					out.print("wiki" + key_wiki + ";freeb_id:" + key_freebase + " ---> ");
 					
 					TreeMap<String, Integer> posting_list = inverted_index.get(key_wiki);
+					List<Posting> v = new Vector<Posting>();
 					for (String anchor : posting_list.keySet()) {
-						out.print("(" + anchor + "," + posting_list.get(anchor) + "), ");
+						Posting p = new Posting(anchor, posting_list.get(anchor));
+						v.add(p);
+					}
+					Collections.sort(v);
+
+					for (Posting p : v) {
+						out.print("(" + p.anchor + "," + p.count + "), ");
 					}
 					out.println();
 				}
