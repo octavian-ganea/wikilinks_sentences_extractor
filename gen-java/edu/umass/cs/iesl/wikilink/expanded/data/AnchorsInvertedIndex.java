@@ -1,28 +1,36 @@
 package edu.umass.cs.iesl.wikilink.expanded.data;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.TreeMap;
+import java.util.Vector;
 
 import org.htmlparser.util.ParserException;
 
 public class AnchorsInvertedIndex {
-	public static HashMap<String, TreeMap<String, Integer>> createIndex(
-			ThriftReader thriftIn)  throws ParserException, IOException {
+	// Create in memory index from one shard of data.
+	public static HashMap<String, TreeMap<String, Integer>> createInMemoryIndex(
+			ThriftReader thriftIn)  throws ParserException, IOException {		
 		int pages_counter = 1;
 		
 		// Inverted index with: entity --> List[name, freq]
 		HashMap<String, String> wiki_freebase_map_ids = new HashMap<String, String>();
 		HashMap<String, TreeMap<String, Integer>> inverted_index = 
 			new HashMap<String, TreeMap<String, Integer>>();
+		
+		int nr_entries = 0;
 		while (thriftIn.hasNext()) {
 			if (pages_counter % 1000 == 0)
 				System.out.println("Finished page : " + pages_counter);
 			
 			WikiLinkItem i = ((WikiLinkItem)thriftIn.read());		  
 
-			/* -------------------- INDEX construction ------------------- */
 			HashSet<String> seen_anchors = new HashSet<String>();
 			for (Mention m : i.mentions) {
 				if (seen_anchors.contains(m.anchor_text)) continue;
@@ -37,29 +45,135 @@ public class AnchorsInvertedIndex {
 				if (posting_list.containsKey(m.anchor_text)) {
 					posting_list.put(m.anchor_text, posting_list.get(m.anchor_text) + 1);
 				} else {
+					nr_entries++;
 					posting_list.put(m.anchor_text, 1);					
 				}
 			}
-
-			if (pages_counter == 90000) {
-				for (String s : inverted_index.keySet()) {
-					boolean print = false;
-					for (String k : inverted_index.get(s).keySet()) {
-						if (inverted_index.get(s).get(k) > 5) {
-							if (!print) {
-								System.out.print(s + "--->");
-								print = true;
-							}
-							System.out.print("(" + k + ":" + inverted_index.get(s).get(k) + ") ;");
-						}
-					}
-					if (print)	System.out.println();
-				}
-				System.out.println(inverted_index.size());
-			}
-			/* -------------------- INDEX finished ------------------- */
 			pages_counter++;
 		}
+		System.out.println("########: " + nr_entries);
 		return inverted_index;
+	}
+	
+	
+	// Output (wikiurl+freebaseID , anchor text) pairs. After all data will be processed,
+	// another function will build the actual index.
+	public static void outputTermDocidPairs(
+			ThriftReader thriftIn)  throws ParserException, IOException {		
+		Vector<PrintWriter> files = new Vector<PrintWriter>();
+		for (int i = 0; i < 26; ++i) {
+			PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("index_shards/" + i, true)));
+			files.add(out);
+		}
+		
+		int pages_counter = 1;
+		
+		while (thriftIn.hasNext()) {
+//			if (pages_counter % 1000 == 0)
+//				System.err.println("Finished page : " + pages_counter);
+			
+			WikiLinkItem i = ((WikiLinkItem)thriftIn.read());		  
+
+			HashSet<String> seen_anchors = new HashSet<String>();
+			for (Mention m : i.mentions) {
+				if (seen_anchors.contains(m.anchor_text)) continue;
+				seen_anchors.add(m.anchor_text);	
+				
+				String key_wiki = m.wiki_url.substring(m.wiki_url.lastIndexOf('/'));
+				String key_freebase = Utils.convertGUIDtoMID(m.freebase_id);
+				char out_fop = 'a';
+				if (key_wiki.length() >= 2) out_fop = key_wiki.charAt(1);
+				if (Character.isUpperCase(out_fop)) {
+					out_fop = Character.toLowerCase(out_fop);
+				}
+				PrintWriter out = files.elementAt( (2600 + (int)out_fop - 'a') % 26);
+				out.println(key_wiki);
+				out.println(key_freebase);
+				out.println(m.anchor_text);
+				out.println("--");
+			}
+			pages_counter++;
+		}
+		
+		for (int i = 0; i < 26; ++i) {
+			files.elementAt(i).flush();
+			files.elementAt(i).close();
+		}		
+	}
+
+	// Creates a distributed inverted-index from Term-Docid pairs and writes it
+	// in files index_shards/starting-letter.shard
+	public static void createDistributedIndexFromTermDocidPairs() throws IOException {
+		PrintWriter logs = new PrintWriter(new BufferedWriter(new FileWriter("index_shards/logs.txt")));
+
+		for (int i = 0; i < 26; ++i) {
+			char letter = (char)(((int)'A') + i);
+			logs.println("Processing : " + letter);
+			logs.flush();
+			BufferedReader in = new BufferedReader(new FileReader("index_shards/term_docids/" + i));
+
+			HashMap<String, TreeMap<String, Integer>> inverted_index = 
+				new HashMap<String, TreeMap<String, Integer>>();
+			HashMap<String,String> wiki_freebase_map = new HashMap<String,String>();
+			
+			try {
+				
+				int line_nr = 0;
+		        String line = in.readLine();
+		        String key_wiki = null;
+		        String key_freebase = null;
+		        String anchor = null;
+		        while (line != null) {
+		        	if (line_nr % 4 != 3 && line.length() <= 2 && line.startsWith("--")) {
+		        		logs.println("Error on line " +line_nr + " in file " + letter);
+		        	}
+		        	if (line_nr % 4 == 0) {
+		        		key_wiki = line;
+		        	} else if (line_nr % 4 == 1) {
+		        		if (!line.startsWith("null")) key_freebase = line;
+		        	} else if (line_nr % 4 == 2) {
+		        		anchor = line;
+		        	} else if (line_nr % 4 == 3) {
+						if (!inverted_index.containsKey(key_wiki)) {
+							inverted_index.put(key_wiki, new TreeMap<String, Integer>());
+						}		        		
+						TreeMap<String, Integer> posting_list = inverted_index.get(key_wiki);
+						if (posting_list.containsKey(anchor)) {
+							posting_list.put(anchor, posting_list.get(anchor) + 1);
+						} else {
+							posting_list.put(anchor, 1);					
+						}
+						if (key_freebase != null && !wiki_freebase_map.containsKey(key_wiki)) {
+							wiki_freebase_map.put(key_wiki, key_freebase);
+						}
+						
+		        		key_wiki = null;
+		        		key_freebase = null;
+		        		anchor = null;
+		        	}
+		        	 
+		        	line_nr++;
+		            line = in.readLine();
+		        }
+		    } finally {
+		        in.close();
+				PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("index_shards/" + letter + ".shard")));
+				for (String key_wiki : inverted_index.keySet()) {
+					String key_freebase = null;
+					if (wiki_freebase_map.containsKey(key_wiki)) 
+						key_freebase = wiki_freebase_map.get(key_wiki);
+					out.print("wiki" + key_wiki + ";freeb_id:" + key_freebase + " ---> ");
+					
+					TreeMap<String, Integer> posting_list = inverted_index.get(key_wiki);
+					for (String anchor : posting_list.keySet()) {
+						out.print("(" + anchor + "," + posting_list.get(anchor) + "), ");
+					}
+					out.println();
+				}
+				out.flush();
+		        out.close();
+		    }
+		}
+		logs.close();
 	}
 }
