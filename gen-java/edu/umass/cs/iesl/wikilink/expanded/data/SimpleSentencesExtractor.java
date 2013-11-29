@@ -134,6 +134,8 @@ public class SimpleSentencesExtractor {
 					System.out.println("--- Mentions:");
 					for (Mention m : i.mentions) {
 						System.out.println(m.wiki_url + "; " + Utils.convertGUIDtoMID(m.freebase_id) + " --> " + m.anchor_text);
+						if (m.context != null)
+							System.out.println(m.context.left + " -- " + m.context.middle + " -- " + m.context.right);
 					}
 					System.out.println("--- Sentences:");
 					for (String s : proper_sentences) System.out.println(s);
