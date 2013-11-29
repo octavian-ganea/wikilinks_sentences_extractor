@@ -26,6 +26,8 @@
             <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/htmllexer.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/sax2.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/junit.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/stanford-corenlp-3.3.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/stanford-corenlp-3.3.0-models.jar"/>
         </jar>
     </target>
 </project>

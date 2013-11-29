@@ -73,22 +73,19 @@ public class AnchorsInvertedIndex {
 	}
 	
 	
-	// Output (wikiurl+freebaseID , anchor text) pairs. After all data will be processed,
+	// Outputs (wikiurl+freebaseID , anchor text) pairs. After all data will be processed,
 	// another function will build the actual index.
+	// Output files: index_shards/term_docids/%d
 	public static void outputTermDocidPairs(
 			ThriftReader thriftIn)  throws ParserException, IOException {		
 		Vector<PrintWriter> files = new Vector<PrintWriter>();
 		for (int i = 0; i < 26; ++i) {
-			PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("index_shards/" + i, true)));
+			PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("index_shards/term_docids/" + i, true)));
 			files.add(out);
 		}
 		
-		int pages_counter = 1;
-		
+		int pages_counter = 1;		
 		while (thriftIn.hasNext()) {
-//			if (pages_counter % 1000 == 0)
-//				System.err.println("Finished page : " + pages_counter);
-			
 			WikiLinkItem i = ((WikiLinkItem)thriftIn.read());		  
 
 			HashSet<String> seen_anchors = new HashSet<String>();
@@ -120,6 +117,8 @@ public class AnchorsInvertedIndex {
 
 	// Creates a distributed inverted-index from Term-Docid pairs and writes it
 	// in files index_shards/starting-letter.shard
+	// Input files: index_shards/term_docids/%d
+	// Output files: index_shards/letter.shard
 	public static void createDistributedIndexFromTermDocidPairs() throws IOException {
 		PrintWriter logs = new PrintWriter(new BufferedWriter(new FileWriter("index_shards/logs.txt")));
 
@@ -188,7 +187,6 @@ public class AnchorsInvertedIndex {
 						v.add(p);
 					}
 					Collections.sort(v);
-
 					for (Posting p : v) {
 						out.print("(" + p.anchor + "," + p.count + "), ");
 					}

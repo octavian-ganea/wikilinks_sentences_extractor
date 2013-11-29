@@ -3,14 +3,13 @@ package edu.umass.cs.iesl.wikilink.expanded.data;
 import java.io.File;
 import org.apache.thrift.TBase;
 
-
 public class Main {
 
-	public static void main(String[] args) throws Exception {
-		AnchorsInvertedIndex.createDistributedIndexFromTermDocidPairs();
+	public static void create_index_main(String[] args) throws Exception {
+		//AnchorsInvertedIndex.createDistributedIndexFromTermDocidPairs();
 	}
 	
-	public static void corpus_download_main(String[] args) throws Exception {
+	public static void main(String[] args) throws Exception {				
 		// Create the reader
 		ThriftReader thriftIn = new ThriftReader(new File(args[0]), new ThriftReader.TBaseCreator() {
 			@Override
@@ -19,11 +18,16 @@ public class Main {
 			}
 		}); 
 		thriftIn.open();
-	
-		/* HTML parser and sentence extractor */
+		
+		/* HTML parser and sentence (with annotations) extractor */
 		//AnnotatedSentencesExtractor.parseHTMLandExtractSentences(thriftIn);
 		
+		/* Looks just at the mentions and outputs (wiki_url, freebase_id, anchor_text) */
 		//AnchorsInvertedIndex.outputTermDocidPairs(thriftIn);		
+
+		/* HTML parser and sentence (without annotations) extractor */
+		SimpleSentencesExtractor.parseHTMLandExtractSentences(thriftIn);
+		
 		thriftIn.close();
 	}
 }
