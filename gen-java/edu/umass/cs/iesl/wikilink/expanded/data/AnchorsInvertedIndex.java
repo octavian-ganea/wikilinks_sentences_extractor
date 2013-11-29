@@ -117,7 +117,6 @@ public class AnchorsInvertedIndex {
 
 	// Creates a distributed inverted-index from Term-Docid pairs and writes it
 	// in files index_shards/starting-letter.shard
-	// Input files: index_shards/term_docids/%d
 	// Output files: index_shards/letter.shard
 	public static void createDistributedIndexFromTermDocidPairs() throws IOException {
 		PrintWriter logs = new PrintWriter(new BufferedWriter(new FileWriter("index_shards/logs.txt")));
