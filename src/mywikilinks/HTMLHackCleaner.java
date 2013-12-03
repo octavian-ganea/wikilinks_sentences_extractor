@@ -1,4 +1,4 @@
-package edu.umass.cs.iesl.wikilink.expanded.data;
+package mywikilinks;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 

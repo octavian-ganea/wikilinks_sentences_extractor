@@ -1,4 +1,4 @@
-package edu.umass.cs.iesl.wikilink.expanded.data;
+package mywikilinks;
 
 import java.io.BufferedInputStream;
 import java.io.File;

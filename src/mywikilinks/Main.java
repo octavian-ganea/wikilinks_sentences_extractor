@@ -1,6 +1,8 @@
-package edu.umass.cs.iesl.wikilink.expanded.data;
+package mywikilinks;
 
 import java.io.File;
+import java.net.URLDecoder;
+
 import org.apache.thrift.TBase;
 
 public class Main {
@@ -9,7 +11,7 @@ public class Main {
 		//AnchorsInvertedIndex.createDistributedIndexFromTermDocidPairs();
 	}
 	
-	public static void main(String[] args) throws Exception {				
+	public static void main(String[] args) throws Exception {
 		// Create the reader
 		ThriftReader thriftIn = new ThriftReader(new File(args[0]), new ThriftReader.TBaseCreator() {
 			@Override

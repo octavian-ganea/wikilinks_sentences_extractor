@@ -1,6 +1,13 @@
-package edu.umass.cs.iesl.wikilink.expanded.data;
+package mywikilinks;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Comparator;
+
+import org.htmlparser.parserapplications.StringExtractor;
+import org.htmlparser.util.ParserException;
 
 public class Utils {
 	
@@ -42,5 +49,4 @@ public class Utils {
 			return o2.compareTo(o1);
 		}
 	}
-	
 }

@@ -1,9 +1,15 @@
-package edu.umass.cs.iesl.wikilink.expanded.data;
+package mywikilinks;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringReader;
+import java.net.URLDecoder;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -12,13 +18,28 @@ import java.util.Vector;
 import org.htmlparser.parserapplications.StringExtractor;
 import org.htmlparser.util.ParserException;
 
+import scala.collection.mutable.HashSet;
+
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.TextAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.TokensAnnotation;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
+import edu.stanford.nlp.process.CoreLabelTokenFactory;
+import edu.stanford.nlp.process.PTBTokenizer;
+import edu.stanford.nlp.process.WordToSentenceProcessor;
 import edu.stanford.nlp.util.CoreMap;
+
+import de.l3s.boilerpipe.BoilerpipeProcessingException;
+import de.l3s.boilerpipe.extractors.*;
+
+import edu.umass.cs.iesl.wikilink.expanded.process.CleanDOM;
+
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.*;
+
 
 
 // This class parses each WikiLinkItem Thrift object and outputs the set of mentions from the page
@@ -55,7 +76,7 @@ public class SimpleSentencesExtractor {
 		return rez;
 	}
 
-	static public Vector<String> extractSentencesWithStanfordNLP(String text, StanfordCoreNLP pipeline) {
+	static public Vector<String> extractSentencesWithStanfordNLP(String text) {
 		Vector<String> rez = new Vector<String>();
 		StringTokenizer st = new StringTokenizer(text, "\n");
 		while (st.hasMoreTokens()) {
@@ -68,44 +89,34 @@ public class SimpleSentencesExtractor {
 			if (x == -1) continue;
 			par = par.substring(0, x+1);
 			if (par.contains(" ")) {
-			    Annotation document = new Annotation(par);			    
-			    pipeline.annotate(document);
-			    List<CoreMap> sentences = document.get(SentencesAnnotation.class);
+			    PTBTokenizer ptbt = new PTBTokenizer(
+			    		new StringReader(par), new CoreLabelTokenFactory(), "ptb3Escaping=false");
 
-			    for(CoreMap sentence: sentences) {
-			    	StringBuilder sb = new StringBuilder("");	
-			    	for (CoreLabel token: sentence.get(TokensAnnotation.class)) {
-			    		String word = token.get(TextAnnotation.class);
-			    		sb.append(word + " ");
-			    	}
-				    rez.add(sb.toString());
-			    }
+			    List<List<CoreLabel>> sents = (new WordToSentenceProcessor()).process(ptbt.tokenize());
+			    for (List<CoreLabel> sent : sents) {
+			    	StringBuilder sb = new StringBuilder("");
+			    	for (CoreLabel w : sent) sb.append(w + " ");
+			    	rez.add(sb.toString());
+			    }				
 			}			
 		}
 		return rez;
 	}
 	
 	
-	
-	
 	// Main function for complete sentence extraction given a Thrift stream as input.
 	static public void parseHTMLandExtractSentences(ThriftReader thriftIn) throws ParserException, IOException, InterruptedException {
-	    Properties props = new Properties();
-	    props.put("annotators", "tokenize, ssplit");
-	    StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
-		
 		int pages_counter = 1;
 		int total_number_sentences_so_far = 0;
+		
 		while (thriftIn.hasNext()) {
 			WikiLinkItem i = ((WikiLinkItem)thriftIn.read());
-
-			//if (pages_counter % 1000 == 0) System.out.println(pages_counter);
-			
 			/*
 			if (i.content.dom != null && pages_counter > 79548) { // TODO: DELETE THIS 
 				System.out.println(pages_counter); // ######       // TODO: DELETE THIS LINE
 			*/	
-			if (i.content.dom != null) {				
+			if (i.content.dom != null) {	
+				/*
 				// Use an in-memory file system to solve this API issue with StringExtractor that
 				// doesn't allow input as a string HTML file content, but just the HTML file path.
 				File temp = new File("/dev/shm/htmlparser.tmp" + pages_counter);
@@ -113,16 +124,85 @@ public class SimpleSentencesExtractor {
 
 				out.write(HTMLHackCleaner.replaceSpecialSymbols(i.content.dom));
 				out.close();		
-
 				StringExtractor se = new StringExtractor("/dev/shm/htmlparser.tmp" + pages_counter);
-				String all_paragraphs = se.extractStrings(false);
+				String all_text = se.extractStrings(true);
 				temp.delete();
+				*/
+				HashMap<String, Vector<Integer>> hm_index = new HashMap<String,Vector<Integer>>();
+				for (Mention m : i.mentions) {
+					int startWikiInURL = m.wiki_url.indexOf("wikipedia.org");
+					String partOfURL = URLDecoder.decode(m.wiki_url.substring(startWikiInURL), "UTF-8");
+					String key = partOfURL +";;"+m.anchor_text;
+
+					hm_index.put(key, new Vector<Integer>());
+				}
+
+				int index = 0;
+				for (Mention m : i.mentions) {
+					int startWikiInURL = m.wiki_url.indexOf("wikipedia.org");
+					String partOfURL = URLDecoder.decode(m.wiki_url.substring(startWikiInURL), "UTF-8");
+					String key = partOfURL +";;"+m.anchor_text;
+					
+					Vector<Integer> v = hm_index.get(key);
+					v.add(index);
+					hm_index.put(key, v);					
+					index++;
+				}
+
+				// This is how it is done in
+				// https://code.google.com/p/wiki-link/source/browse/process/src/main/scala/edu/umass/cs/iesl/wikilink/expanded/process/Runner.scala:110				
+				String cleanDom = Charset.defaultCharset().decode(ByteBuffer.wrap(i.content.dom.getBytes())).toString();
+				//String cleanDom = CleanDOM.apply(i.content.dom).get();
+				Document doc = Jsoup.parse(HTMLHackCleaner.replaceSpecialSymbols(cleanDom));
+
+				Iterator<Element> it = doc.select("a").iterator();
+				HashSet<Integer> visited_mentions = new HashSet<Integer>();
+
+				while (it.hasNext()) {
+					Element link = it.next();
+					String linkHref = link.attr("href");
+					String linkText = link.text().trim();
+					int startWikiInURL = linkHref.indexOf("wikipedia.org");
+					if (startWikiInURL == -1) continue;
+
+					String url = linkHref.substring(startWikiInURL);
+					String partOfURL = "";
+				    try {
+						partOfURL = URLDecoder.decode(url, "UTF-8");
+				    } catch (java.lang.IllegalArgumentException e) {
+				    	System.out.println("ERROR: " + url);  
+				    	url = url.replaceAll("%(?![0-9a-fA-F]{2})", "%25");
+				    	partOfURL = URLDecoder.decode(url, "UTF-8");
+				    }
+					
+					String key = partOfURL +";;"+linkText;
+					
+					if (!hm_index.containsKey(key)) continue;
+					int mentionIndex = -1;
+					for (Integer j : hm_index.get(key)) {
+						if (!visited_mentions.contains(j)) {
+							visited_mentions.add(j);
+							link.append("[[[end " + j + "]]]");							
+							link.before("[[[start " + j + "]]]");							
+							break;
+						}
+					}					
+				}								
+
+				// Use Wikilinks code to extract text from the HTML.				
+				String all_text ="";
+				try {
+					all_text = KeepEverythingExtractor.INSTANCE.getText(doc.outerHtml());
+				} catch (BoilerpipeProcessingException e) {
+					e.printStackTrace();
+				}
 				
 				// Vector with sentences containing at least two wikipedia hyperlinks; annotated with their
-				// freebase ids.
+				// freebase ids. 
+				// Use Stanford NLP framework to extract sentences from the text.
 				Vector<String> proper_sentences =
-					SimpleSentencesExtractor.extractSentencesWithStanfordNLP(all_paragraphs, pipeline);
-				
+					SimpleSentencesExtractor.extractSentencesWithStanfordNLP(all_text);
+												
 				if (proper_sentences.size() > 0) {
 					total_number_sentences_so_far += proper_sentences.size();
 					System.out.println("-------------------------------------");
@@ -134,12 +214,10 @@ public class SimpleSentencesExtractor {
 					System.out.println("--- Mentions:");
 					for (Mention m : i.mentions) {
 						System.out.println(m.wiki_url + "; " + Utils.convertGUIDtoMID(m.freebase_id) + " --> " + m.anchor_text);
-						if (m.context != null)
-							System.out.println(m.context.left + " -- " + m.context.middle + " -- " + m.context.right);
 					}
 					System.out.println("--- Sentences:");
 					for (String s : proper_sentences) System.out.println(s);
-				}	
+				}
 			}
 			pages_counter++;
 		}		
