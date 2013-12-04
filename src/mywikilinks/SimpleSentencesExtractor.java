@@ -104,8 +104,23 @@ public class SimpleSentencesExtractor {
 	}
 	
 	
+	static public String extractTextFromHTMLUsingStringExtractor(String html) throws Exception {
+		// Use an in-memory file system to solve this API issue with StringExtractor that
+		// doesn't allow input as a string HTML file content, but just the HTML file path.
+		double x = Math.random();
+		File temp = new File("/dev/shm/htmlparser.tmp" + x);
+		BufferedWriter out = new BufferedWriter(new FileWriter(temp));
+
+		out.write(html);
+		out.close();		
+		StringExtractor se = new StringExtractor("/dev/shm/htmlparser.tmp" + x);
+		String all_text = se.extractStrings(false);
+		temp.delete();
+		return all_text;		
+	}
+	
 	// Main function for complete sentence extraction given a Thrift stream as input.
-	static public void parseHTMLandExtractSentences(ThriftReader thriftIn) throws ParserException, IOException, InterruptedException {
+	static public void parseHTMLandExtractSentences(ThriftReader thriftIn) throws Exception {
 		int pages_counter = 1;
 		int total_number_sentences_so_far = 0;
 		
@@ -116,36 +131,33 @@ public class SimpleSentencesExtractor {
 				System.out.println(pages_counter); // ######       // TODO: DELETE THIS LINE
 			*/	
 			if (i.content.dom != null) {	
-				/*
-				// Use an in-memory file system to solve this API issue with StringExtractor that
-				// doesn't allow input as a string HTML file content, but just the HTML file path.
-				File temp = new File("/dev/shm/htmlparser.tmp" + pages_counter);
-				BufferedWriter out = new BufferedWriter(new FileWriter(temp));
 
-				out.write(HTMLHackCleaner.replaceSpecialSymbols(i.content.dom));
-				out.close();		
-				StringExtractor se = new StringExtractor("/dev/shm/htmlparser.tmp" + pages_counter);
-				String all_text = se.extractStrings(true);
-				temp.delete();
-				*/
 				HashMap<String, Vector<Integer>> hm_index = new HashMap<String,Vector<Integer>>();
 				for (Mention m : i.mentions) {
 					int startWikiInURL = m.wiki_url.indexOf("wikipedia.org");
-					String partOfURL = URLDecoder.decode(m.wiki_url.substring(startWikiInURL), "UTF-8");
-					String key = partOfURL +";;"+m.anchor_text;
+					try {
+						String partOfURL = URLDecoder.decode(m.wiki_url.substring(startWikiInURL), "UTF-8");
+						String key = partOfURL +";;"+m.anchor_text;
 
-					hm_index.put(key, new Vector<Integer>());
+						hm_index.put(key, new Vector<Integer>());
+					} catch (java.lang.IllegalArgumentException e) {
+				    }
 				}
 
 				int index = 0;
 				for (Mention m : i.mentions) {
 					int startWikiInURL = m.wiki_url.indexOf("wikipedia.org");
-					String partOfURL = URLDecoder.decode(m.wiki_url.substring(startWikiInURL), "UTF-8");
-					String key = partOfURL +";;"+m.anchor_text;
 					
-					Vector<Integer> v = hm_index.get(key);
-					v.add(index);
-					hm_index.put(key, v);					
+					try {
+						String partOfURL = URLDecoder.decode(m.wiki_url.substring(startWikiInURL), "UTF-8");
+						String key = partOfURL +";;"+m.anchor_text;
+					
+						Vector<Integer> v = hm_index.get(key);
+						v.add(index);
+						hm_index.put(key, v);					
+					} catch (java.lang.IllegalArgumentException e) {
+				    }
+					
 					index++;
 				}
 
@@ -170,15 +182,11 @@ public class SimpleSentencesExtractor {
 				    try {
 						partOfURL = URLDecoder.decode(url, "UTF-8");
 				    } catch (java.lang.IllegalArgumentException e) {
-				    	System.out.println("ERROR: " + url);  
-				    	url = url.replaceAll("%(?![0-9a-fA-F]{2})", "%25");
-				    	partOfURL = URLDecoder.decode(url, "UTF-8");
 				    }
 					
 					String key = partOfURL +";;"+linkText;
 					
 					if (!hm_index.containsKey(key)) continue;
-					int mentionIndex = -1;
 					for (Integer j : hm_index.get(key)) {
 						if (!visited_mentions.contains(j)) {
 							visited_mentions.add(j);
@@ -191,32 +199,40 @@ public class SimpleSentencesExtractor {
 
 				// Use Wikilinks code to extract text from the HTML.				
 				String all_text ="";
-				try {
-					all_text = KeepEverythingExtractor.INSTANCE.getText(doc.outerHtml());
-				} catch (BoilerpipeProcessingException e) {
-					e.printStackTrace();
-				}
+				 all_text = extractTextFromHTMLUsingStringExtractor(doc.outerHtml());
+				 
+				/*
+				 ////// This is their parser, but it consumes ~ 20GB of RAM and has a lot of warnings 
+				 ////// for quite many HTMLs. Seems to do the same thing as the parser I used above. 
+				all_text = KeepEverythingExtractor.INSTANCE.getText(doc.outerHtml());
 				
-				// Vector with sentences containing at least two wikipedia hyperlinks; annotated with their
-				// freebase ids. 
-				// Use Stanford NLP framework to extract sentences from the text.
+				 /////// Vector with sentences containing at least two wikipedia hyperlinks; annotated with their
+				 /////// freebase ids. 
+				 /////// Use Stanford NLP framework to extract sentences from the text.
+				
 				Vector<String> proper_sentences =
 					SimpleSentencesExtractor.extractSentencesWithStanfordNLP(all_text);
-												
-				if (proper_sentences.size() > 0) {
-					total_number_sentences_so_far += proper_sentences.size();
+				*/
+				
+				if (all_text.length() > 0) {
+				//	total_number_sentences_so_far += proper_sentences.size();
 					System.out.println("-------------------------------------");
 					System.out.println("--- Page num: " + pages_counter);
 					System.out.println("--- Docid: " + i.doc_id);
 					System.out.println("--- URL: " + i.url);
-					System.out.println("--- Num sentences: " + proper_sentences.size());
-					System.out.println("--- Total num sentences so far: " + total_number_sentences_so_far);
+				//	System.out.println("--- Num sentences: " + proper_sentences.size());
+				//	System.out.println("--- Total num sentences so far: " + total_number_sentences_so_far);
 					System.out.println("--- Mentions:");
+					
+					int index_mention = 0;
 					for (Mention m : i.mentions) {
 						System.out.println(m.wiki_url + "; " + Utils.convertGUIDtoMID(m.freebase_id) + " --> " + m.anchor_text);
+						index_mention ++;
 					}
-					System.out.println("--- Sentences:");
-					for (String s : proper_sentences) System.out.println(s);
+				//	System.out.println("--- Sentences:");
+				//	for (String s : proper_sentences) System.out.println(s);
+					System.out.println("--- All text:");
+					System.out.println(all_text);
 				}
 			}
 			pages_counter++;
