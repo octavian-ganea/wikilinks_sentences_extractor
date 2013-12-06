@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -120,7 +121,7 @@ public class SimpleSentencesExtractor {
 	}
 	
 	// Main function for complete sentence extraction given a Thrift stream as input.
-	static public void parseHTMLandExtractSentences(ThriftReader thriftIn) throws Exception {
+	static public void parseHTMLandExtractSentences(ThriftReader thriftIn) throws IOException, Exception {
 		int pages_counter = 1;
 		int total_number_sentences_so_far = 0;
 		
@@ -136,7 +137,12 @@ public class SimpleSentencesExtractor {
 				for (Mention m : i.mentions) {
 					int startWikiInURL = m.wiki_url.indexOf("wikipedia.org");
 					try {
-						String partOfURL = URLDecoder.decode(m.wiki_url.substring(startWikiInURL), "UTF-8");
+						String partOfURL = "";
+						try {
+							partOfURL = URLDecoder.decode(m.wiki_url.substring(startWikiInURL), "UTF-8");
+						} catch (UnsupportedEncodingException e) {
+							e.printStackTrace();
+						}
 						String key = partOfURL +";;"+m.anchor_text;
 
 						hm_index.put(key, new Vector<Integer>());
@@ -156,14 +162,24 @@ public class SimpleSentencesExtractor {
 						v.add(index);
 						hm_index.put(key, v);					
 					} catch (java.lang.IllegalArgumentException e) {
-				    }
+				    } catch (UnsupportedEncodingException e) {
+						e.printStackTrace();
+					}
 					
 					index++;
 				}
 
+				//try {
 				// This is how it is done in
 				// https://code.google.com/p/wiki-link/source/browse/process/src/main/scala/edu/umass/cs/iesl/wikilink/expanded/process/Runner.scala:110				
-				String cleanDom = Charset.defaultCharset().decode(ByteBuffer.wrap(i.content.dom.getBytes())).toString();
+				String cleanDom = "";
+				try {
+					cleanDom = Charset.defaultCharset().decode(ByteBuffer.wrap(i.content.dom.getBytes())).toString();
+				} catch (java.lang.OutOfMemoryError e) {
+					e.printStackTrace();
+					System.err.print("CAUGHT OUT OF MEM ERROR HERE: " + cleanDom.length());
+				}
+				
 				//String cleanDom = CleanDOM.apply(i.content.dom).get();
 				Document doc = Jsoup.parse(HTMLHackCleaner.replaceSpecialSymbols(cleanDom));
 
